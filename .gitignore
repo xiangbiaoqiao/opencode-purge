@@ -5,6 +5,7 @@ dist/
 *.opencodepurge.bak
 .state/
 .env
+.idea
 .DS_Store
 Thumbs.db
 purge/
