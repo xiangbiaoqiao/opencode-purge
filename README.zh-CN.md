@@ -57,8 +57,9 @@ dsh-purge 改的是 DeepSeek Harness 的 `@deepseek-ai/*` 包；opencode 是单�
 
 ## 适配范围
 
-- **实测**：opencode `1.19.0`（Windows x64，Bun 单文件构建），模型 `deepseek-v4-flash` / `deepseek-v4-pro`。
-- 钩子表按 1.19 写；升级后先拿临时目录试：
+- **实测**：opencode `1.19.0`（Windows x64，Bun 单文件构建）与 `2.3.2`（OpenCode Desktop，`opencode-cli.exe`），模型 `deepseek-v4-flash` / `deepseek-v4-pro`。
+- 插件同时实现两套 API：V1（`server()` 返回钩子表）与 V2（`setup(ctx)` 在 `ctx.session` / `ctx.permission` / `ctx.tool` 上注册钩子）。V2 会把插件装成目录 `plugins/opencode-purge/index.js`，因为 V2 只把目录当本地插件加载。
+- 升级大版本后先拿临时目录试：
 
 ```powershell
 $env:OPENCODE_CONFIG_DIR="C:\tmp\oc-test"
@@ -90,7 +91,7 @@ opencode-purge apply
 
 ```
 ~/.config/opencode/
-├── plugins/opencode-purge.js      运行时钩子
+├── plugins/opencode-purge/index.js  运行时钩子（V2；V1 会同时清掉旧的 plugins/opencode-purge.js）
 ├── purge/
 │   ├── prompt-inject.md           注入段（可编辑；revert 保留）
 │   ├── policy.json                baseline / compaction / netScope
@@ -212,11 +213,18 @@ opencode 1.19 的提示词是内嵌在 `opencode.exe` 里的模板字符串（`H
 插件把每轮决策写进 `purge/purge.log`：
 
 ```
-plugin init home=... enabled=true baseline=strip
+# V1（1.19）
+plugin init v1 home=... enabled=true baseline=strip
 config hook: permission -> allow
 system.transform: strip cut=true keptChars=13005
-system.transform: strip inChars=21534 outChars=34600 outParts=2
 permission.ask allow: bash
+
+# V2（2.x）
+plugin init v2 home=... enabled=true baseline=strip
+tool registration ok (v2)
+system.transform: strip by metadata coreIdx=2
+system.transform v2: strip inChars=25773 outChars=23402
+permission.evaluate allow: shell
 ```
 
 三个可复现的检查点：
